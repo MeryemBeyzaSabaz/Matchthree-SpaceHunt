@@ -38,7 +38,19 @@ namespace Installers
         public override void Start()
         {
             LoadPlayer();
-            GameObject levelNew = Container.InstantiatePrefab(_mySettings.LevelList[_pLevel]);
+
+            // _pLevel değerinin geçerli olup olmadığını kontrol ediyoruz
+            if (_pLevel >= 0 && _pLevel < _mySettings.LevelList.Count)
+            {
+                GameObject levelNew = Container.InstantiatePrefab(_mySettings.LevelList[_pLevel]);
+            }
+            else
+            {
+                Debug.LogError("Geçersiz seviye indeksi: " + _pLevel);
+                _pLevel = 0; // Geçersiz seviye indeksi olduğunda _pLevel'i sıfırlıyoruz
+                SavePlayer();
+                GameObject levelNew = Container.InstantiatePrefab(_mySettings.LevelList[_pLevel]); // Varsayılan olarak Level1'i yükler
+            }
         }
 
         [Serializable]
@@ -59,7 +71,6 @@ namespace Installers
 
         private void OnLevelComplete()
         {
-            LoadPlayer();
             LevelUp();
             SavePlayer();
         }
@@ -67,6 +78,11 @@ namespace Installers
         private void LevelUp()
         {
             _pLevel++;
+            // Geçersiz bir değere ulaşıldığında sıfırlama
+            if (_pLevel >= _mySettings.LevelList.Count)
+            {
+                _pLevel = 0;
+            }
         }
 
         private void SavePlayer()
@@ -76,12 +92,19 @@ namespace Installers
 
         private void LoadPlayer()
         {
-            _pLevel = PlayerPrefs.GetInt(EnvVar.PlayerlevelPref);
+            _pLevel = PlayerPrefs.GetInt(EnvVar.PlayerlevelPref, 0);
+
+            // _pLevel'in geçerli bir indeks olup olmadığını kontrol ediyoruz
+            if (_pLevel < 0 || _pLevel >= _mySettings.LevelList.Count)
+            {
+                Debug.LogError("Yüklenen geçersiz seviye indeksi: " + _pLevel);
+                _pLevel = 0; // Geçersiz bir indeks olduğunda _pLevel'i sıfırlıyoruz
+            }
         }
 
         private void UnRegisterEvents()
         {
-            PlayerEvents.LevelComplete += OnLevelComplete;
+            PlayerEvents.LevelComplete -= OnLevelComplete;
         }
     }
 }
