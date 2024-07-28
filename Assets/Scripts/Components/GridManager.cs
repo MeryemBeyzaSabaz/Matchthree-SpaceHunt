@@ -57,16 +57,21 @@ namespace Components
         private Settings _mySettings;
         private DestroyNoise _destroyNoise;
         private SoundManager _soundManager;
-        // [SerializeField] private GameObject _matchParticlePrefab;
+       
 
         public ITweenContainer TweenContainer{get;set;}
 
         [Header("EndLevelFields")]
         [SerializeField] private int targetScore = 100;
-        public GameObject endOfLevel1;
+       
+        public string currentLevel;
+        public GameObject EndOfLevelPanel;
+        public GameObject GameOverPanel;
         public Button nextLevelButton;
-        public TextMeshProUGUI endOfLevel1Text;
-        [SerializeField] private string _endLevelMessage = "";
+        
+        private bool isLevelComplete = false;
+       
+        
         private void Awake()
         {
             if (ProjectSettings == null)  // NullReferenceException hatası için:
@@ -98,8 +103,12 @@ namespace Components
 
         private void Start()
         {
-            _soundManager = FindObjectOfType<SoundManager>(); 
-            _destroyNoise = FindObjectOfType<DestroyNoise>(); 
+            
+            // Başlangıçta panelleri kapat
+            EndOfLevelPanel.SetActive(false);
+            GameOverPanel.SetActive(false); 
+            
+            
             for(int x = 0; x < _grid.GetLength(0); x ++)
             for(int y = 0; y < _grid.GetLength(1); y ++)
             {
@@ -112,19 +121,56 @@ namespace Components
             IsGameOver(out _hintTile, out _hintDir);
             GridEvents.GridLoaded?.Invoke(_gridBounds);
             GridEvents.InputStart?.Invoke();
-
-            endOfLevel1.SetActive(false);
+            
+            if (SceneManager.GetActiveScene().name == "Level1")
+            {
+                currentLevel = "Level1";
+            }
+            else if (SceneManager.GetActiveScene().name == "LevelBase")
+            {
+                currentLevel = "LevelBase";
+            }
+            
+            _soundManager = FindObjectOfType<SoundManager>(); 
+            _destroyNoise = FindObjectOfType<DestroyNoise>(); 
+            
             nextLevelButton.onClick.AddListener(LoadNextLevel);
+            PlayerEvents.ScoreUpdate += OnScoreUpdate;
+            
         }
+        
+        private void OnScoreUpdate(int arg0)
+        {  Debug.Log($"Score updated: {arg0}");
+            if (arg0 >= targetScore && !isLevelComplete)
+            {
+                isLevelComplete = true;  // Level tamamlandığında flag'i true yap
 
+                if (currentLevel == "Level1")
+                {
+                    // Level1 için EndOfLevel panelini açın
+                    EndLevel();
+                }
+                else if (currentLevel == "LevelBase")
+                {
+                    // LevelBase için GameOver panelini açın
+                    GameOver();
+                }
+                
+                EndGame();
+                PlayerEvents.LevelComplete?.Invoke();
+            }
+        }
+       
+        
         void EndGame()
         {
             Debug.Log("EndGame called");
             Time.timeScale = 0; 
-            endOfLevel1.SetActive(true);
-            endOfLevel1Text.text = _endLevelMessage;
+            EndOfLevelPanel.SetActive(true);
+            GameOverPanel.SetActive(true);
+            
         }
-
+        
         void LoadNextLevel()
         {
             Time.timeScale = 1; 
@@ -132,6 +178,24 @@ namespace Components
             SceneManager.LoadScene(currentSceneIndex);
             Debug.Log("LoadLevel2 called.");
         }
+
+
+
+
+
+        void EndLevel()
+        {
+            // EndOfLevel panelini açın
+            EndOfLevelPanel.SetActive(true);
+        }
+
+        void GameOver()
+        {
+            // GameOver panelini açın
+            GameOverPanel.SetActive(true);
+        }
+
+    
         private void OnEnable() {RegisterEvents();}
 
         private void OnDisable()
@@ -528,7 +592,7 @@ namespace Components
             InputEvents.MouseDownGrid += OnMouseDownGrid;
             InputEvents.MouseUpGrid += OnMouseUpGrid;
 
-            PlayerEvents.ScoreUpdate += OnScoreUpdate;
+            
             if (GridEvents == null)   // NullReferenceException hatası için:
             {
                 Debug.LogError("GridEvents is not injected.");
@@ -607,14 +671,9 @@ namespace Components
             }
         }
         
-        private void OnScoreUpdate(int arg0)
-        {
-            if (arg0 >= targetScore)
-            {
-                EndGame();
-                PlayerEvents.LevelComplete?.Invoke();
-            }
-        }
+     
+        
+     
         
         private void UnRegisterEvents()
         {
@@ -623,8 +682,9 @@ namespace Components
             GridEvents.InputStart -= OnInputStart;
             GridEvents.InputStop -= OnInputStop;
             
-            // NullReferenceException hatası için:
             PlayerEvents.ScoreUpdate -= OnScoreUpdate;
+            // NullReferenceException hatası için:
+       
             if (InputEvents != null)
             {
                 InputEvents.MouseDownGrid -= OnMouseDownGrid;
