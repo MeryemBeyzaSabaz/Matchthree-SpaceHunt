@@ -724,9 +724,7 @@ namespace Components
             public GameObject BorderRight => _borderRight;
             public GameObject BorderTop => _borderTop;
             public GameObject BorderBot => _borderBot;
-
-
-            
+            public object LevelList { get; set; }
         }
     }
 }

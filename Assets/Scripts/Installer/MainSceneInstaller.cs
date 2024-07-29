@@ -4,6 +4,7 @@ using Events;
 using Settings;
 using UnityEngine;
 using Zenject;
+using UnityEngine.SceneManagement;
 
 namespace Installers
 {
@@ -22,7 +23,37 @@ namespace Installers
 
         private void Awake()
         {
+            SceneManager.sceneLoaded += OnSceneLoaded;
+        }
+
+        private void OnDestroy()
+        {
+            SceneManager.sceneLoaded -= OnSceneLoaded;
+        }
+
+        private void OnSceneLoaded(Scene scene, LoadSceneMode mode)
+        {
+            Debug.Log("Scene Loaded: " + scene.name);
+
+            if (scene.name == "Login")
+            {
+                return;
+            }
+
             _mySettings = projectSettings.MainSceneSettings;
+            LoadPlayer();
+
+            if (_pLevel >= 0 && _pLevel < _mySettings.LevelList.Count)
+            {
+                GameObject levelNew = Container.InstantiatePrefab(_mySettings.LevelList[_pLevel]);
+            }
+            else
+            {
+                Debug.LogError("Geçersiz seviye indeksi: " + _pLevel);
+                _pLevel = 0;
+                SavePlayer();
+                GameObject levelNew = Container.InstantiatePrefab(_mySettings.LevelList[_pLevel]);
+            }
         }
 
         private void OnEnable()
@@ -35,38 +66,14 @@ namespace Installers
             UnRegisterEvents();
         }
 
-        public override void Start()
-        {
-            LoadPlayer();
-
-            // _pLevel değerinin geçerli olup olmadığını kontrol ediyoruz
-            if (_pLevel >= 0 && _pLevel < _mySettings.LevelList.Count)
-            {
-                GameObject levelNew = Container.InstantiatePrefab(_mySettings.LevelList[_pLevel]);
-            }
-            else
-            {
-                Debug.LogError("Geçersiz seviye indeksi: " + _pLevel);
-                _pLevel = 0; // Geçersiz seviye indeksi olduğunda _pLevel'i sıfırlıyoruz
-                SavePlayer();
-                GameObject levelNew = Container.InstantiatePrefab(_mySettings.LevelList[_pLevel]); // Varsayılan olarak Level1'i yükler
-            }
-        }
-
-        [Serializable]
-        public class Settings
-        {
-            [SerializeField] private List<GameObject> _levelList;
-
-            public List<GameObject> LevelList
-            {
-                get { return this._levelList; }
-            }
-        }
-
         private void RegisterEvents()
         {
             PlayerEvents.LevelComplete += OnLevelComplete;
+        }
+
+        private void UnRegisterEvents()
+        {
+            PlayerEvents.LevelComplete -= OnLevelComplete;
         }
 
         private void OnLevelComplete()
@@ -78,7 +85,6 @@ namespace Installers
         private void LevelUp()
         {
             _pLevel++;
-            // Geçersiz bir değere ulaşıldığında sıfırlama
             if (_pLevel >= _mySettings.LevelList.Count)
             {
                 _pLevel = 0;
@@ -93,18 +99,21 @@ namespace Installers
         private void LoadPlayer()
         {
             _pLevel = PlayerPrefs.GetInt(EnvVar.PlayerlevelPref, 0);
-
-            // _pLevel'in geçerli bir indeks olup olmadığını kontrol ediyoruz
             if (_pLevel < 0 || _pLevel >= _mySettings.LevelList.Count)
             {
                 Debug.LogError("Yüklenen geçersiz seviye indeksi: " + _pLevel);
-                _pLevel = 0; // Geçersiz bir indeks olduğunda _pLevel'i sıfırlıyoruz
+                _pLevel = 0;
             }
         }
 
-        private void UnRegisterEvents()
+        [Serializable]
+        public class Settings
         {
-            PlayerEvents.LevelComplete -= OnLevelComplete;
+            [SerializeField] private List<GameObject> _levelList;
+            public List<GameObject> LevelList
+            {
+                get { return this._levelList; }
+            }
         }
     }
 }
