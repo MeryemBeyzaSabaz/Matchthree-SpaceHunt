@@ -33,10 +33,11 @@ namespace Installers
 
         private void OnSceneLoaded(Scene scene, LoadSceneMode mode)
         {
-            Debug.Log("Scene Loaded: " + scene.name);
+            Debug.Log("Scene Loaded: " + scene.name); // Debug log to check loaded scene name
 
             if (scene.name == "Login")
             {
+                Debug.Log("Login Scene Loaded"); // Check if Login scene is loaded
                 return;
             }
 
